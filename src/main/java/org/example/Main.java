@@ -1,54 +1,58 @@
 package org.example;
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 
 public class Main {
     public static void main(String[] args) {
-        for (int i = 0; i < 10; i++) {
-            double x_max = SW(Main::f32);
-            System.out.println(x_max);
+        ArrayList<Double> max = new ArrayList<>(1000);
+        for (int i = 0; i < 100000; i++) {
+            double x_max = SW(Main::f33);
+            max.add(i, x_max);
+            //System.out.println(x_max);
         }
-        //f32(2, 2);
+        System.out.println("AVG: " + max.stream().mapToDouble(a -> a).average());
     }
 
     public static double SW(function f) {
-        boolean rememberMax = true;
-        ArrayList<Double> startArray = generate_Start();
+        ArrayList<Double> startArray = generateStart();
         int era = 0;
         double[] xy = new double[] {startArray.get(0), startArray.get(1)};
         double[] xy_new = new double[2];
         double[] xy_max = xy.clone();
+        ArrayList<String> history = new ArrayList<>(1);
         int M = 0; //Liczba iteracji
         do {
-            for (int i = 0; i < startArray.get(5); i++) {
-                xy_new[0] = randomNumber(xy[0], startArray.get(2));
-                xy_new[1] = randomNumber(xy[1], startArray.get(2));
+            for (int i = 0; i < Starting_Parameters.L; i++) {
+                xy_new[0] = randomNumberX(xy[0], startArray.get(2));
+                xy_new[1] = randomNumberY(xy[1], startArray.get(2));
                 if (f.count(xy_new) > f.count(xy)) {
                     xy = xy_new.clone();
-                    if (rememberMax) {
+                    history.add(history.size(), Arrays.toString(xy) + " f(x,y): " + f.count(xy));
+                    if (Starting_Parameters.REMEMBER_MAX) {
                         if (f.count(xy) > f.count(xy_max)) {
                             xy_max = xy.clone();
                         }
                     }
                 } else {
-                    xy = chooseX(startArray.get(2), xy, xy_new, f, startArray.get(6)).clone();
+                    xy = chooseXY(startArray.get(2), xy, xy_new, f, Starting_Parameters.BOLTZMANN).clone();
+                    if (xy == xy_new) {
+                        history.add(history.size(), Arrays.toString(xy) + " f(x,y): " + f.count(xy));
+                    }
                 }
                 M++;
-                if (M < startArray.get(4)) break;      //Plus 1, ponieważ liczba iteracji jest typem Double
+                if (M < Starting_Parameters.M_MAX) break;
             }
-            startArray.set(1, startArray.get(1) * startArray.get(3));
-        } while (M < startArray.get(4));
-        if (rememberMax) {
+            startArray.set(1, startArray.get(1) * Starting_Parameters.ALPHA);
+        } while (M < Starting_Parameters.M_MAX);
+        //System.out.println(history);
+        if (Starting_Parameters.REMEMBER_MAX) {
             return f.count(xy_max);
         }else {
             return f.count(xy);
         }
     }
 
-    public static double[] chooseX(double T, double[] xy,  double[] xy_new, function f, double B) {
-        if (f.count(xy_new) == 0) return xy;
+    public static double[] chooseXY(double T, double[] xy, double[] xy_new, function f, double B) {
         double prawd1 = Math.exp(-(f.count(xy) - f.count(xy_new))/(T * B));
         double prawd2 = Math.random();
         if (prawd1 > prawd2) return xy_new;
@@ -68,11 +72,7 @@ public class Main {
         return 0;
     }
 
-    public static double f32(double[] xy) {
-        int[] nr = new int[10];
-        for (int i = 0; i < 10; i++) {
-            nr[i] = i;
-        }
+    public static double f33(double[] xy) {
         int[] h = new int[10];
         for (int i = 0; i < 10; i++) {
             h[i] = 10 - i;
@@ -88,33 +88,40 @@ public class Main {
         return 0;
     }
 
+    public static double f45(double[] xy) {
+        return 21.5 + xy[0] * Math.sin(4 * Math.PI * xy[0]) + xy[1] * Math.sin(20 * Math.PI * xy[1]);
+    }
+
     //Generates: [0. x-start - początkowa wartość x,
     // 1. y_start - początkowa wartość y dla dwuwymiarowych,
     // 2. T-start - startowa temperatura,
-    // 3. alpha - współczynnik stygnięcia w %,
+    // 3. alpha - współczynnik stygnięcia,
     // 4. M_max - maksymalna liczba iteracji,
     // 5. L-liczba kroków w epoce
-    public static ArrayList<Double> generate_Start() {
+    public static ArrayList<Double> generateStart() {
         ArrayList<Double> start = new ArrayList<>(6);
-        double min = -550;
-        double max = 550;
-        start.add(0, (min + Math.random() * (max - min))); //x_start
-        start.add(1, (min + Math.random() * (max - min))); //y_start
-        start.add(2, 1400.0); //T
-        start.add(3, 0.999); //alpha
-        start.add(4, 5000.0); //M_max
-        start.add(5, 1.0); //kroki w epoce
-        start.add(6, 0.1); //Stała Boltzmana ?
+        start.add(0, (Starting_Parameters.MIN_X + Math.random() * (Starting_Parameters.MAX_X - Starting_Parameters.MIN_X)));
+        start.add(1, (Starting_Parameters.MIN_Y + Math.random() * (Starting_Parameters.MAX_Y - Starting_Parameters.MIN_Y)));
+        start.add(2, Starting_Parameters.T_START);
         return start;
     }
 
-    public static double randomNumber(double x, double T) {
+    public static double randomNumberX(double x, double T) {
         double random = Math.random();
-        double min = x - 2 * T;
-        double max = x + 2 * T;
-        double rand = min + random * (max - min);
-        //System.out.println("x: " + x + " Random: " + random + " min: " + min + " max: " + max + " rand " + rand  + " T: " + T);
-        return rand;
+        double min = x - T * Starting_Parameters.T_MNOZ;
+        if (min < Starting_Parameters.MIN_X) min = Starting_Parameters.MIN_X;
+        double max = x + T * Starting_Parameters.T_MNOZ;
+        if (max > Starting_Parameters.MAX_X) max = Starting_Parameters.MAX_X;
+        return min + random * (max - min);
+    }
+
+    public static double randomNumberY(double y, double T) {
+        double random = Math.random();
+        double min = y - T * Starting_Parameters.T_MNOZ;
+        if (min < Starting_Parameters.MIN_Y) min = Starting_Parameters.MIN_Y;
+        double max = y + T * Starting_Parameters.T_MNOZ;
+        if (max > Starting_Parameters.MAX_Y) max = Starting_Parameters.MAX_Y;
+        return min + random * (max - min);
     }
 }
 
