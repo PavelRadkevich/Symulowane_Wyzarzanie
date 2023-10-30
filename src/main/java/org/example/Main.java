@@ -1,17 +1,12 @@
 package org.example;
 import java.util.ArrayList;
-import java.util.Arrays;
 
 public class Main {
     public static void main(String[] args) {
-        //ArrayList<Double> max = new ArrayList<>(1000);
         for (int i = 0; i < 10; i++) {
-            //System.out.println("Iteracja nr: " + i + "\n");
             double x_max = SW(Main::f45);
             System.out.println(x_max + "\n");
-            //max.add(i, x_max);
         }
-        //System.out.println("AVG: " + max.stream().mapToDouble(a -> a).average());
     }
 
     public static double SW(function f) {
@@ -19,8 +14,6 @@ public class Main {
         double[] xy = new double[] {startArray.get(0), startArray.get(1)};
         double[] xy_new = new double[2];
         double[] xy_max = xy.clone();
-        /*ArrayList<String> history = new ArrayList<>(1);
-        ArrayList<String> historyWorse = new ArrayList<>(1);*/
         int M = 0; //Liczba iteracji
         do {
             for (int i = 0; i < Starting_Parameters.L; i++) {
@@ -28,25 +21,19 @@ public class Main {
                 xy_new[1] = randomNumberY(xy[1], startArray.get(2));
                 if (f.count(xy_new) > f.count(xy)) {
                     xy = xy_new.clone();
-                    //history.add(history.size(), "nr: " + history.size() + " " + Arrays.toString(xy) + " f(x,y): " + f.count(xy) + "\n");
                     if (Starting_Parameters.REMEMBER_MAX) {
                         if (f.count(xy) > f.count(xy_max)) {
                             xy_max = xy.clone();
                         }
                     }
                 } else {
-                    //double lastRezult = f.count(xy);
                     xy = chooseXY(startArray.get(2), xy, xy_new, f, Starting_Parameters.BOLTZMANN).clone();
-                    /*if (xy[0] == xy_new[0] && xy[1] == xy_new[1] && lastRezult > f.count(xy_new)) {
-                        historyWorse.add(historyWorse.size(), "GORSZE nr: " + historyWorse.size() + " " + Arrays.toString(xy) + " f(x,y): " + f.count(xy) + "\n");
-                    }*/
                 }
                 M++;
                 if (M < Starting_Parameters.M_MAX) break;
             }
             startArray.set(1, startArray.get(1) * Starting_Parameters.ALPHA);
         } while (M < Starting_Parameters.M_MAX);
-        //System.out.println("Ilość zmian: " + history.size() + "\nIlość gorszych: " + historyWorse.size() + "\n" + "\nOstatnie: " + f.count(xy));
         if (Starting_Parameters.REMEMBER_MAX) {
             return f.count(xy_max);
         }else {
